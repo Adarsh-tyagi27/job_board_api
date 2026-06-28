@@ -1,0 +1,143 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  fullName  String?
+  role      String   @default("USER")
+  avatar    String?
+
+  // Relations
+  company       Company?
+  applications  Application[]
+  savedJobs     SavedJob[]
+  notifications Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Company {
+  id          Int     @id @default(autoincrement())
+  userId      Int     @unique
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  website     String?
+  logo        String?
+  location    String?
+
+  jobs        Job[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Job {
+  id              Int     @id @default(autoincrement())
+  companyId       Int
+  company         Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  title           String
+  description     String
+  location        String
+  jobType         String  // full-time, part-time, contract, internship
+  salaryMin       Int?
+  salaryMax       Int?
+  experienceLevel String? // entry, mid, senior
+  status          String  @default("open") // open, closed
+  viewCount       Int     @default(0)
+
+  // Relations
+  applications    Application[]
+  savedBy         SavedJob[]
+  skills          Skill[]
+
+  postedAt        DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([status])
+  @@index([location])
+}
+
+model Application {
+  id        Int     @id @default(autoincrement())
+  jobId     Int
+  job       Job     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  userId    Int
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  resume    String?
+  coverLetter String?
+  status    String  @default("applied") // applied, reviewing, rejected, accepted
+
+  appliedAt DateTime @default(now())
+
+  @@unique([jobId, userId]) // User can only apply once per job
+  @@index([userId])
+  @@index([jobId])
+}
+
+model SavedJob {
+  id        Int     @id @default(autoincrement())
+  userId    Int
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId     Int
+  job       Job     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  
+  savedAt   DateTime @default(now())
+
+  @@unique([userId, jobId]) // User can't save same job twice
+  @@index([userId])
+}
+
+model Skill {
+  id    Int     @id @default(autoincrement())
+  name  String  @unique
+  
+  jobs  Job[]
+
+  @@index([name])
+}
+
+model Notification {
+  id      Int     @id @default(autoincrement())
+  userId  Int
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type    String  // APPLICATION_RECEIVED, JOB_REJECTED, etc
+  message String
+  read    Boolean @default(false)
+  data    String? // JSON string for extra data
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model RefreshToken {
+  id        Int     @id @default(autoincrement())
+  token     String  @unique
+  userId    Int
+  
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
