@@ -11,9 +11,11 @@ app.use(express.json());
 
 
 //health check route
-
-app.get('/',(req,res)=>{
-    res.json({status:'ok,timestamp:',timestamp:new Date().toISOString});
+app.get('/', (req, res) => {
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+    });
 });
 
 
